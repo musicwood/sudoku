@@ -1,140 +1,136 @@
+/*
+ * sudoku.c
+ *
+ *  Created on: 2016年8月9日
+ *      Author: WOOD
+ */
+
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
 #include <assert.h>
 
-typedef struct cell {
-    unsigned short v;
+
+typedef unsigned char Sv;
+typedef struct {
     unsigned short f;
-} Cell;
+    Sv c;              /* row, column, square */
+    Sv v;              /* cell value*/
+} Sf;
 
-static Cell sudoku[81], last_sudoku[81];
-
-static const int sudoku_size = sizeof(Cell) * 81;
-
-#if 0
-unsigned char test_1[81] = {
-    0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0
-};
-#endif
+struct sudoku {
+    Sv cnt;
+    Sv b[81];     /* board */
+    Sf rf[9];     /* row flag */
+    Sf cf[9];     /* column flag */
+    Sf sf[9];     /* square flag */
 
 
-#if 1
-
-unsigned char test_1[81] = {
-    0, 8, 6, 1, 7, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 4, 9, 0, 0, 0, 0, 0, 8,
-    7, 0, 0, 0, 0, 0, 1, 5, 0,
-    0, 0, 0, 0, 0, 0, 0, 6, 0,
-    0, 3, 0, 0, 0, 4, 0, 0, 0,
-    0, 0, 0, 0, 0, 9, 0, 0, 4,
-    0, 2, 0, 0, 0, 0, 0, 0, 0,
-    1, 0, 0, 6, 0, 0, 0, 0, 0
 };
 
+static Sv sudoku_flag_index[0x200];
 
-#else
-
-unsigned char test_1[81] = {
-    0, 6, 0, 0, 0, 2, 0, 0, 8,
-    0, 0, 3, 0, 6, 0, 4, 0, 9,
-    0, 0, 0, 0, 1, 0, 7, 0, 0,
-    0, 0, 0, 7, 9, 0, 8, 0, 0,
-    6, 0, 0, 0, 0, 0, 0, 0, 5,
-    0, 0, 7, 0, 8, 6, 0, 0, 0,
-    0, 0, 9, 0, 4, 0, 0, 0, 0,
-    4, 0, 1, 0, 5, 0, 9, 0, 0,
-    7, 0, 0, 8, 0, 0, 0, 2, 0
-};
-
-
-unsigned char test_1[81] = {
-    8, 0, 7, 0, 0, 0, 0, 0, 0,
-    3, 0, 0, 0, 4, 0, 7, 6, 0,
-    4, 0, 0, 0, 0, 7, 0, 0, 5,
-    2, 0, 6, 0, 0, 5, 0, 0, 0,
-    0, 0, 5, 0, 0, 0, 1, 0, 0,
-    0, 0, 0, 8, 0, 0, 6, 0, 9,
-    7, 0, 0, 1, 0, 0, 0, 0, 8,
-    0, 3, 9, 0, 8, 0, 0, 0, 6,
-    0, 0, 0, 0, 0, 0, 9, 0, 2
-};
-
-
-unsigned char test_1[81] = {
-    0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0
-};
-
-
-
-unsigned char test_1[81] = {
-    0, 0, 0, 0, 4, 0, 7, 0, 0,
-    0, 0, 7, 0, 0, 1, 0, 5, 0,
-    0, 0, 8, 3, 0, 2, 0, 0, 0,
-    1, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 4, 5, 6, 0, 3, 9, 2, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 6,
-    0, 0, 0, 9, 0, 5, 2, 0, 0,
-    0, 9, 0, 4, 0, 0, 3, 0, 0,
-    0, 0, 2, 0, 1, 0, 0, 0, 0
-};
-
-unsigned char test_1[81] = {
-    0, 3, 0, 0, 0, 1, 6, 7, 0,
-    0, 7, 9, 0, 0, 0, 0, 0, 0,
-    2, 1, 8, 0, 0, 0, 0, 0, 4,
-    0, 4, 0, 0, 0, 9, 3, 0, 0,
-    9, 0, 0, 0, 1, 0, 0, 0, 2,
-    0, 0, 1, 2, 0, 0, 0, 5, 0,
-    8, 0, 0, 0, 0, 0, 7, 4, 5,
-    0, 0, 0, 0, 0, 0, 8, 6, 0,
-    0, 9, 5, 8, 0, 0, 0, 3, 0
-};
-#endif
-
-
-static void sudoku_init(unsigned char in[]) {
+Sf sudoku_check_row(struct sudoku *s, int row) {
     int i = 0;
-    
-    for (i = 0; i < 81; i++) {
-        if (in[i] < 0 || in[i] > 9) {
-            fprintf(stderr, "Error in sudoku_init, input is not a vaild sudoku array.\n");
-            abort();
-        }
-        else if (in[i] == 0) {
-            sudoku[i].v = 0;
-            sudoku[i].f = 0x1ff;
-        }
-        else {
-            sudoku[i].v = in[i];
-            sudoku[i].f = 0;
-        }
+    Sf f = {0x1ff, 9, 0};
+    Sv v = 0;
 
-    }    
+    for (i = 0; i < 9; i++) {
+        v = s->b[row *9 + i];
+        if (v != 0) {
+            f.f = f.f & (~(1 << (v - 1)));
+            f.c--;
+        }
+    }
+
+    return f;
 }
 
-static void sudoku_print(void) {
+Sf sudoku_check_column(struct sudoku *s, int column) {
+    int i = 0;
+    Sf f = {0x1ff, 9, 0};
+    Sv v = 0;
+
+    for (i = 0; i < 9; i++) {
+        v = s->b[i *9 + column];
+        if (v != 0) {
+            f.f = f.f & (~(1 << (v - 1)));
+            f.c--;
+        }
+    }
+
+    return f;
+}
+
+Sf sudoku_check_square(struct sudoku *s, int row, int column) {
+    int i = 0, j = 0;
+    Sf f = {0x1ff, 9, 0};
+    Sv v = 0;
+
+    row = row * 3;
+    column = column * 3;
+
+    for (i = 0; i < 3; i++) {
+        for (j = 0; j < 3; j++) {
+            v = s->b[(row + i) * 9 + column + j];
+            if (v != 0) {
+                f.f = f.f & (~(1 << (v - 1)));
+                f.c--;
+            }
+        }
+    }
+
+    return f;
+}
+
+void sudoku_init(struct sudoku *s, FILE * in) {
+    assert(in != NULL);
+    int cnt = 0, c = 0, i = 0, j = 0;
+
+    while(cnt < 81) {
+        c = fgetc(in);
+        if (c == EOF){
+            fprintf(stderr, "Invalid file.\n");
+            fclose(in);
+            abort();
+        }
+        if (c >= '0' && c <= '9') {
+            s->b[cnt++] = c - '0';
+        }
+    }
+    fclose(in);
+
+    s->cnt = 0;
+
+    for (i = 0; i < 9; i++) {
+        s->rf[i] = sudoku_check_row(s, i);
+        s->cf[i] = sudoku_check_column(s, i);
+        s->cnt = s->cnt + s->rf[i].c;
+    }
+
+    for (i = 0; i < 3; i++) {
+        for (j = 0; j < 3; j++) {
+            s->sf[i * 3 + j] = sudoku_check_square(s, i, j);
+        }
+    }
+
+    memset((void *)sudoku_flag_index, 0, sizeof(sudoku_flag_index));
+    sudoku_flag_index[1] = 1;
+    sudoku_flag_index[2] = 2;
+    sudoku_flag_index[4] = 3;
+    sudoku_flag_index[8] = 4;
+    sudoku_flag_index[16] = 5;
+    sudoku_flag_index[32] = 6;
+    sudoku_flag_index[64] = 7;
+    sudoku_flag_index[128] = 8;
+    sudoku_flag_index[256] = 9;
+}
+
+void sudoku_print(struct sudoku *s) {
     int i = 0, j = 0;
     for (i = 0; i < 9; i++) {
         for (j = 0; j < 9; j++) {
-            fprintf(stderr, "%u ", sudoku[i * 9 + j].v);
+            fprintf(stderr, "%u ", s->b[i * 9 + j]);
             if (j == 2 || j == 5) {
                 fprintf(stderr, "| ");
             }
@@ -147,50 +143,31 @@ static void sudoku_print(void) {
     fprintf(stderr, "\n");
 }
 
-static unsigned short sudoku_check_row(int row) {
-    int i = 0;
-    unsigned short v = 0, f = 0x1ff;
 
-    for (i = 0; i < 9; i++) {
-        v = sudoku[row * 9 + i].v;
-        if (v != 0) {
-            f = f & (~(1 << (v - 1)));
-        }
-    }
+void sudoku_set_cell(struct sudoku *s, int row, int column, Sv v) {
+    assert(s->b[row * 9 + column] == 0);
+    s->b[row * 9 + column] = v;
+    s->cnt--;
 
-    return f;
+    s->rf[row].f = s->rf[row].f & (~(1 << (v - 1)));
+    s->rf[row].c--;
+
+    s->cf[column].f = s->cf[column].f & (~(1 << (v - 1)));
+    s->cf[column].c--;
+
+    s->sf[(row / 3) * 3 + (column / 3)].f = s->sf[(row / 3) * 3 + (column / 3)].f & (~(1 << (v - 1)));
+    s->sf[(row / 3) * 3 + (column / 3)].c--;
 }
 
-static unsigned short sudoku_check_column(int column) {
-    int i = 0;
-    unsigned short v = 0, f = 0x1ff;
+Sf sudoku_get_cell_flag(struct sudoku *s, int row, int column) {
+    assert(s->b[row * 9 + column] == 0);
+    Sf f = {0x1ff, 0, 0};
 
-    for (i = 0; i < 9; i++) {
-        v = sudoku[i * 9 + column].v;
-        if (v != 0) {
-            f = f & (~(1 << (v - 1)));
-        }
-    }
+    f.f = f.f & s->rf[row].f & s->cf[column].f & s->sf[(row / 3) * 3 + (column / 3)].f;
 
-    return f;
-
-}
-
-static unsigned short sudoku_check_big_cell(int row, int column) {
-    int i = 0, j = 0;
-    unsigned short v = 0, f = 0x1ff;
-
-    row = row - (row % 3);
-    column = column - (column % 3);
-    
-    for (i = 0; i < 3; i++) {
-        for (j = 0; j < 3; j++) {
-            v = sudoku[(row + i) * 9 + column + j].v;
-            if (v != 0) {
-                f = f & (~(1 << (v - 1)));
-            }
-
-        }
+    if (sudoku_flag_index[f.f] != 0) {
+        f.v = sudoku_flag_index[f.f];
+        sudoku_set_cell(s, row, column, f.v);
     }
 
     return f;
@@ -198,201 +175,302 @@ static unsigned short sudoku_check_big_cell(int row, int column) {
 
 
 
-static void sudoku_check_fix_row(int row, unsigned short v) {
-    int i = 0;
-    unsigned short f = 0x1ff & (~(1 << (v - 1)));
-
-    for (i = 0; i < 9; i ++) {
-        v = sudoku[row * 9 + i].v;
-        if (v == 0) {
-            sudoku[row * 9 + i].f = sudoku[row * 9 + i].f & f;
-        }
-    }
-}
-
-static void sudoku_check_fix_column(int column, unsigned short v) {
-    int i = 0;
-    unsigned short f = 0x1ff & (~(1 << (v - 1)));
-
-    for (i = 0; i < 9; i ++) {
-        v = sudoku[i * 9 + column].v;
-        if (v == 0) {
-            sudoku[i * 9 + column].f = sudoku[i * 9 + column].f & f;
-        }
-    }
-}
-
-static void sudoku_check_fix_big_cell(int row, int column, unsigned short v) {
-    int i = 0, j = 0;
-    unsigned short f = 0x1ff & (~(1 << (v - 1)));
-
-    row = row - (row % 3);
-    column = column - (column % 3);
-
-    for (i = 0; i < 3; i++) {
-        for (j = 0; j < 3; j++) {
-            v = sudoku[(row + i) * 9 + column + j].v;
-            if (v == 0) {
-                sudoku[(row + i) * 9 + column + j].f = sudoku[(row + i) * 9 + column + j].f & f;
-            }
-        }
-    }
-}
-
-static void sudoku_check_fix(int row, int column, unsigned short v) {
-    sudoku_check_fix_row(row, v);
-    sudoku_check_fix_column(column, v);
-    sudoku_check_fix_big_cell(row, column, v);
-}
-
-static void sudoku_check_flag(int row, int column) {
-    unsigned short f = sudoku[row * 9 + column].f;
-    unsigned short v = 0;
-    int have = 0;
-    assert(0 == sudoku[row * 9 + column].v);
-    
-    while (f) {
-        v++;
-        if (f % 2 == 1) {
-            have = 1;
-        }
-
-        f = f >> 1;
-        if (1 == have) {
-            break;
-        }
-    }
-    
-    if (have == 0) {
-        sudoku_print();
-        fprintf(stderr, "<r:%d, c:%d> Invaild sudoku.\n", row, column);
-        abort();
-    }
-    else if (f > 0) {
-        /* Have more than one numbers can fill in this blank, do nothing. */
-    }
-    else {
-        /* Only v can fill in this blank. */
-        sudoku[row * 9 + column].v = v;
-        sudoku[row * 9 + column].f = 0;
-        sudoku_check_fix(row, column, v);
-    }
-}
-
-
-static int sudoku_check_plus_row(int row, int column, unsigned short v) {
-    int i = 0;
+int sudoku_check_row_plus(struct sudoku *s, int row, int column, Sv v) {
+    assert(s->b[row * 9 + column] == 0);
     unsigned short f = 1 << (v - 1);
+    int i = 0;
+    Sf c_f;
 
     for (i = 0; i < 9; i++) {
         if (i == column) continue;
-        if (0 != sudoku[row * 9 + i].v) continue;
+        if (v == s->b[row * 9 + i]) return 0;
+        if (s->b[row * 9 + i]) continue;
 
-        if (f & sudoku[row * 9 + i].f) return 0;
+        c_f = sudoku_get_cell_flag(s, row, i);
+        if (c_f.f == 0) return -1;
+        if (c_f.v != 0 && c_f.v != v) continue;
+
+        if ((f & c_f.f) || (c_f.v == v)) return 0;
     }
+
+    sudoku_set_cell(s, row, column, v);
 
     return 1;
 }
 
-static int sudoku_check_plus_column(int row, int column, unsigned short v) {
-    int i = 0;
+
+int sudoku_check_column_plus(struct sudoku *s, int row, int column, Sv v) {
+    assert(s->b[row * 9 + column] == 0);
     unsigned short f = 1 << (v - 1);
+    int i = 0;
+    Sf c_f;
 
     for (i = 0; i < 9; i++) {
         if (i == row) continue;
-        if (0 != sudoku[i * 9 + column].v) continue;
+        if (v == s->b[i * 9 + column]) return 0;
+        if (s->b[i * 9 + column]) continue;
 
-        if (f & sudoku[i * 9 + column].f) return 0;
+        c_f = sudoku_get_cell_flag(s, i, column);
+        if (c_f.f == 0) return -1;
+        if (c_f.v != 0 && c_f.v != v) continue;
+
+        if ((f & c_f.f) || (c_f.v == v)) return 0;
     }
+
+    sudoku_set_cell(s, row, column, v);
 
     return 1;
 }
 
-static int sudoku_check_plus_big_cell(int row, int column, unsigned short v) {
-    int i = 0, j = 0;
+int sudoku_check_square_plus(struct sudoku *s, int row, int column, Sv v) {
+    assert(s->b[row * 9 + column] == 0);
     unsigned short f = 1 << (v - 1);
+    int i = 0, j = 0;
+    Sf c_f;
 
-    int r = row - (row % 3);
-    int c = column - (column % 3);
+    int r = row / 3;
+    int c = column / 3;
 
     for (i = 0; i < 3; i++) {
         for (j = 0; j < 3; j++) {
             if (r + i == row && c + j == column) continue;
-            if (0 != sudoku[(r + i) * 9 + c + j].v) continue;
-            
-            if (f & sudoku[(r + i) * 9 + c + j].f) return 0;
+            if (v == s->b[(r + i) * 9 + (c + j)]) return 0;
+            if (s->b[(r + i) * 9 + (c + j)]) continue;
+
+            c_f = sudoku_get_cell_flag(s, r + i, c + j);
+            if (c_f.f == 0) return -1;
+            if (c_f.v != 0 && c_f.v != v) continue;
+
+            if ((f & c_f.f) || (c_f.v == v)) return 0;
         }
     }
+
+    sudoku_set_cell(s, row, column, v);
 
     return 1;
 }
 
-static unsigned short sudoku_check_plus(int row, int column) {
-    unsigned short f = sudoku[row * 9 + column].f;
-    unsigned short v = 0;
+int sudoku_check_plus(struct sudoku *s, int row, int column) {
+    assert(s->b[row * 9 + column] == 0);
+    Sf f = sudoku_get_cell_flag(s, row, column);
+    Sv n = 0;
+    int ret = 0;
 
-    while (f) {
-        v++;
-        if (f % 2 == 1) {
-            if (sudoku_check_plus_row(row, column, v)) return v;
-            if (sudoku_check_plus_column(row, column, v)) return v;
-            if (sudoku_check_plus_big_cell(row, column, v)) return v;
+    /* Set up. */
+    if (f.v) return 1;
+
+    /* Invalid Sudoku. */
+    if (f.f == 0) return -1;
+
+    /* Check */
+    while (f.f) {
+        n++;
+        if (f.f % 2 == 1) {
+            ret = sudoku_check_row_plus(s, row, column, n);
+            if (ret != 0) return ret;
+
+            ret = sudoku_check_column_plus(s, row, column, n);
+            if (ret != 0) return ret;
+
+            ret = sudoku_check_column_plus(s, row, column, n);
+            if (ret != 0) return ret;
         }
-
-        f = f >> 1;
+        f.f = f.f >> 1;
     }
-    
+
     return 0;
 }
 
-static void sudoku_check(void) {
+int sudoku_check(struct sudoku *s) {
+    int ret = 0;
     int i = 0, j = 0;
-    unsigned short v = 0, f = 0x1ff;
-    unsigned short flag = 0;
 
     for (i = 0; i < 9; i++) {
         for (j = 0; j < 9; j++) {
-            v = sudoku[i * 9 + j].v;
-            if (v == 0) {
-                flag = 0;
-                f = 0x1ff;
-                f = f & sudoku_check_row(i);
-                f = f & sudoku_check_column(j);
-                f = f & sudoku_check_big_cell(i, j);
-                sudoku[i * 9 + j].f = f;
-                sudoku_check_flag(i, j);
+            if (s->b[i * 9 + j] == 0) {
+                ret = sudoku_check_plus(s, i, j);
 
-                if (sudoku[i * 9 + j].v == 0) {
-                    flag = sudoku_check_plus(i, j);
-                    if (flag) {
-                        sudoku[i * 9 + j].v = flag;
-                        sudoku[i * 9 + j].f = 0;
-                        sudoku_check_fix(i, j, flag);
-                    }
+                if (0 == ret || 1 == ret) continue;
+
+                if (-1 == ret) {
+                    //fprintf(stderr, "Invalid Sudoku.\n");
+                    return -1;
                 }
             }
         }
     }
+
+    /* Completed. */
+    if (s->cnt == 0) return 1;
+
+    return 0;
 }
 
 
-int main(void) {
-    int round = 1;
+int sudoku_resolv(struct sudoku *s) {
+    Sv last = 0;
+    int ret = 0;
+    int cnt = 1;
 
-    sudoku_init(test_1);
-    fprintf(stderr, "Init sudoku:\n");
-    sudoku_print();
+    (void)cnt;
+    do {
+        last = s->cnt;
+        ret = sudoku_check(s);
+        //fprintf(stderr, "Round %d:<%d>\n", cnt++, ret);
+        //sudoku_print(s);
+        if (-1 == ret || 1 == ret) break;
+    } while(last != s->cnt);
 
-again:
-    memcpy((void *)last_sudoku, (void *)sudoku, sudoku_size);
+    return ret;
+}
 
-    sudoku_check();
-    fprintf(stderr, "Round %d:\n", round++);
-    sudoku_print();
-    
-    if (0 != memcmp((void *)last_sudoku, (void *)sudoku, sudoku_size)) {
-        goto again;
+
+typedef struct {
+    void *s[81];
+    int top;
+} sudoku_stack;
+
+struct sudoku_try {
+    struct sudoku s;
+    int r;
+    int c;
+    Sv  v;
+};
+
+#define sudoku_stack_is_empty(S) ((S)->top == -1)
+
+#define sudoku_stack_pop(S) (S)->s[(S)->top--]
+
+#define sudoku_stack_push(S, V) (S)->s[++(S)->top] = (V)
+
+int get_next(struct sudoku_try *try) {
+    int i = 0, j = 0;
+    Sf f;
+
+    for (i = try->r; i < 9; i++) {
+        for (j = try->c; j < 9; j++) {
+            if (0 == try->s.b[i * 9 + j]) {
+                f = sudoku_get_cell_flag(&(try->s), i, j);
+                f.f = f.f >> try->v;
+                while (f.f) {
+                    try->v++;
+                    if (f.f % 2 == 1) {
+                        try->r = i;
+                        try->c = j;
+                        return 1;
+                    }
+                    f.f = f.f >> 1;
+                }
+            }
+        }
     }
-    
-    return 0;    
+
+    return 0;
+}
+
+void sudoku_resolver(struct sudoku *s){
+    int ret = 0;
+    sudoku_stack *stack = NULL;
+    struct sudoku_try *tmp = NULL;
+    struct sudoku t;
+
+
+    ret = sudoku_resolv(s);
+    if (1 == ret || -1 == ret) {
+        fprintf(stderr, "result<%d>:\n", ret);
+        sudoku_print(s);
+        return;
+    }
+
+    stack = (sudoku_stack *)malloc(sizeof(sudoku_stack));
+    if (NULL == stack) {
+        fprintf(stderr, "malloc failed.<stack>\n");
+        abort();
+    }
+    memset((void *)stack, 0, sizeof(sudoku_stack));
+    stack->top = -1;
+
+    tmp = (struct sudoku_try *)malloc(sizeof(struct sudoku_try));
+    if (NULL == tmp) {
+        fprintf(stderr, "malloc failed.<sudoku_try>\n");
+        abort();
+    }
+
+    memset((void *)tmp, 0, sizeof(struct sudoku_try));
+    tmp->s = *s;
+    sudoku_stack_push(stack, (void *)tmp);
+
+    do {
+        tmp = sudoku_stack_pop(stack);
+        if (0 == get_next(tmp)) {
+            free(tmp);
+            continue;
+        }
+        t = tmp->s;
+        sudoku_set_cell(&t, tmp->r, tmp->c, tmp->v);
+
+        //fprintf(stderr, "Test[%d] <%d, %d, %u>.\n", stack->top + 1, tmp->r, tmp->c, tmp->v);
+        ret = sudoku_resolv(&t);
+
+        if (ret == 0) {
+            sudoku_stack_push(stack, (void *)tmp);
+            tmp = (struct sudoku_try *)malloc(sizeof(struct sudoku_try));
+            if (NULL == tmp) {
+                fprintf(stderr, "malloc failed.<sudoku_try>\n");
+                abort();
+            }
+            memset((void *)tmp, 0, sizeof(struct sudoku_try));
+            tmp->s = t;
+            sudoku_stack_push(stack, (void *)tmp);
+        }
+        else if (-1 == ret) {
+            sudoku_stack_push(stack, (void *)tmp);
+        }
+        else {
+            free(tmp);
+            break;
+        }
+
+    }while(!sudoku_stack_is_empty(stack));
+
+    fprintf(stderr, "Test completed, result<%d>:\n", ret);
+    sudoku_print(&t);
+
+    while (!sudoku_stack_is_empty(stack)){
+        tmp = sudoku_stack_pop(stack);
+        fprintf(stderr, "stack[%d] <%d, %d, %u>:\n", stack->top + 1, tmp->r, tmp->c, tmp->v);
+        sudoku_print(&tmp->s);
+        free(tmp);
+    }
+    free(stack);
+}
+
+int main(int argc, char *argv[]) {
+
+    FILE *in = NULL;
+    struct sudoku s;
+
+    if (argc == 1) {
+        in = stdin;
+    }
+    else if (argc == 2) {
+        in = fopen(argv[1], "r");
+        if (in == NULL) {
+            fprintf(stderr, "No such file: %s\n", argv[1]);
+            abort();
+        }
+    }
+    else {
+        fprintf(stderr, "Usage:%s [file name]\nif file name not given, use stdin.\n", argv[0]);
+        return 0;
+    }
+
+    sudoku_init(&s, in);
+
+    fprintf(stderr, "Init Suidoku:\n");
+    sudoku_print(&s);
+
+    sudoku_resolver(&s);
+
+    return 0;
 }
